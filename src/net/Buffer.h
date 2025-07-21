@@ -51,6 +51,7 @@ public:
         writerIndex_ = kCheapPrepend;
     }
 
+    //得到当前buffer中的可读数据
     std::string GetBufferAllAsString() {
         size_t len = readableBytes();
         std::string result(peek(), len);
