@@ -19,7 +19,6 @@ void ThreadPool::~ThreadPool() {
         //轮询结束每一个线程
     }
 }
-
 bool ThreadPool::isFull() const
 {
     return maxQueueSize_ > 0 && queue_.size() >= maxQueueSize_;
