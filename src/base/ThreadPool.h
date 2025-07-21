@@ -27,6 +27,7 @@ public:
     void stop();
 
     const std::string& name() cosnt { return name_; }
+	void setMaxQueueSize(size_t maxSize) { maxQueueSize_ = maxSize; }
     size_t queueSize() const { return queue_.size(); }
 
     void add(ThreadFunction ThreadFunction);
@@ -37,6 +38,7 @@ private:
 
     bool    running_;                     //是否执行中
     std::string name_;                    //名字
+	size_t maxQueueSize_;				  //最大队列长度
     size_t threadSize_;                   //大小
     mutable std::mutex mutex_;            //互斥量
     std::condition_variable condition_;   //信号量

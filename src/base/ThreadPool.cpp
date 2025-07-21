@@ -9,7 +9,8 @@ ThreadPool::ThreadPool(const std::string& name) :
     mutex_(),
     running_(false),
     cond_(),
-    threadSize_(0) {}
+    threadSize_(0)
+	maxQueueSize_(0) {}
 
 void ThreadPool::~ThreadPool() {
     stop();
@@ -17,6 +18,11 @@ void ThreadPool::~ThreadPool() {
         thread.join();
         //轮询结束每一个线程
     }
+}
+
+bool ThreadPool::isFull() const
+{
+    return maxQueueSize_ > 0 && queue_.size() >= maxQueueSize_;
 }
 
 void ThreadPool::start() {
@@ -48,18 +54,48 @@ void ThreadPool::queueSize() const {
 
 void ThreadPool::add(ThreadFunction threadFunction) {
     std::unique_lock<std::mutex> lock(mutex_);
-    queue_.emplace_back(threadFunction);
-    cond_.notify_one();
+	while(isFull() && running_) {
+		cond_.wait(lock);
+	}
+
+	if(!running_) return;
+	queue_.emplace_back(threadFunction);
+	cond_.notify_one();
 }
 
-void ThreadPool::runInThread() {
-    try {
-        if(threadInitCallback_) {}
+void ThreadPool::runInThread()
+{
+    try
+    {
+        if (threadInitCallback_)
+        {
+            threadInitCallback_();
+        }
+        ThreadFunction task;
+        while (running_)
+        {
+            {
+                std::unique_lock<std::mutex> lock(mutex_);
+                while (queue_.empty())
+                {
+                    if (!running_)
+                    {
+                        return;
+                    }
+                    cond_.wait(lock);
+                }
+                task = queue_.front();
+                queue_.pop_front();
+            }
+            if (task != nullptr)
+            {
+                task();
+            }
+        }
+    }
+    catch(...)
+    {
+        LOG_WARN << "runInThread throw exception";
     }
 }
-
-void ThreadPool::isFull() {
-
-}
-
 
