@@ -39,4 +39,31 @@ ssize_t Buffer::readFd(int fd, int *saveErrno) {
     vec[1].iov_base = extrabuf;
     vec[1].iov_len = sizeof(extrabuf);
 
+	//如果buffer的空间足够大,我们就不需要使用缓冲栈
+	const int iovcnt = (writable < sizeof(extrabuf)) ? 2 : 1;
+	const ssize_t n = readv(fd, vec, iovcnt);
+
+	if(n < 0) {
+		*saveErrno = errno;
+    } else if(n <= writable) {
+		writerindex_ += n;
+	}  else // extrabuf里面也写入了n-writable长度的数据
+    {
+		//当数据量超过buffer的承载量时,
+        writerIndex_ = buffer_.size();
+        append(extrabuf, n - writable); // 对buffer_扩容 并将extrabuf存储的另一部分数据追加至buffer_
+    }
+    return n;
+}
+
+// inputBuffer_.readFd表示将对端数据读到inputBuffer_中，移动writerIndex_指针
+// outputBuffer_.writeFd表示将数据写入到outputBuffer_中，从readerIndex_开始，可以写readableBytes()个字节
+ssize_t Buffer::writeFd(int fd, int *saveErrno)
+{
+    ssize_t n = ::write(fd, peek(), readableBytes());
+    if (n < 0)
+    {
+        *saveErrno = errno;
+    }
+    return n;
 }
